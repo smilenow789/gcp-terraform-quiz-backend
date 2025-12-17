@@ -18,8 +18,8 @@
 #    - android_sha1_hashes  = ["..."]
 # 7. Terminal im Ordner öffnen
 # 8. Umgebungsvariable in der Powershell setzen: $env:GOOGLE_CLOUD_QUOTA_PROJECT = "<Projekt-ID>"
-# 8. "terraform init" ausführen
-# 9. "terraform apply" ausführen
+# 9. "terraform init" ausführen
+# 10. "terraform apply" ausführen
 #
 
 
