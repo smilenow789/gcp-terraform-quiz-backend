@@ -3,4 +3,5 @@ terraform.tfstate
 .terraform*
 terraform.tfvars
 
-google-services.json
+google-services.json__pycache__/
+*.pyc
