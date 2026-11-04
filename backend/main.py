@@ -17,9 +17,25 @@ db = firestore.client()
 # Projekt Konfiguration
 PROJECT_ID = os.environ.get("GCP_PROJECT") 
 LOCATION = "us-central1" 
+# Bucket, in den die Clients ihre PDFs hochladen (per Terraform gesetzt)
+PDF_BUCKET = os.environ.get("PDF_BUCKET")
 
 if PROJECT_ID:
     vertexai.init(project=PROJECT_ID, location=LOCATION)
+
+def is_own_upload(gs_link, uid):
+    """Erlaubt nur gs://<PDF_BUCKET>/pdfUploads/<uid>/<datei>.
+
+    Verhindert, dass ein Client beliebige Objekte (anderer Nutzer oder
+    anderer Buckets) einlesen und anschliessend löschen lässt.
+    """
+    if not PDF_BUCKET:
+        return False
+    prefix = f"gs://{PDF_BUCKET}/pdfUploads/{uid}/"
+    if not gs_link.startswith(prefix):
+        return False
+    filename = gs_link[len(prefix):]
+    return bool(filename) and "/" not in filename and ".." not in filename
 
 # Auth prüfen
 def verify_token(request):
@@ -39,19 +55,9 @@ def verify_token(request):
 @app.route('/generate', methods=['POST'])
 def generate_questions():
     # 1. Authentifizierung prüfen
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({"error": "No valid token provided"}), 401
-    
-    id_token = auth_header.split("Bearer ")[1]
-    
-    try:
-        # Token validieren
-        decoded_token = auth.verify_id_token(id_token)
-        uid = decoded_token['uid']
-    except Exception as e:
-        print(f"Auth Error: {e}")
-        return jsonify({"error": "Invalid token"}), 401
+    uid, error = verify_token(request)
+    if error:
+        return jsonify({"error": error}), 401
 
     # 2. gs_link aus Request holen
     data = request.json
@@ -62,6 +68,9 @@ def generate_questions():
 
     if not gs_link:
         return jsonify({"error": "No 'gs_link' provided"}), 400
+
+    if not isinstance(gs_link, str) or not is_own_upload(gs_link, uid):
+        return jsonify({"error": "Invalid 'gs_link'"}), 403
 
     print(f"Verarbeite File: {gs_link} für User: {uid}")
 

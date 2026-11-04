@@ -313,6 +313,10 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "GCP_PROJECT"
         value = var.project_id
       }
+      env {
+        name  = "PDF_BUCKET"
+        value = google_storage_bucket.pdf_bucket.name
+      }
     }
   }
 

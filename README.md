@@ -4,6 +4,25 @@ Dieses Repository enthält **Infrastructure as Code (IaC)** auf Basis von **Terr
 
 ---
 
+## 🏗️ Architektur
+
+![Architektur: Unity-App, Firebase Auth, Cloud Storage, Cloud Run, Vertex AI, Firestore](docs/architektur.png)
+
+**Ablauf:** Die Unity-App meldet sich über Firebase Authentication an und lädt ein PDF in Cloud Storage
+hoch (Regeln in `storage.rules`: nur eigener Ordner, nur PDF, max. 150 MB). Danach ruft sie
+`POST /generate` mit ID-Token und `gs://`-Link am Cloud-Run-Backend (Flask) auf. Das Backend
+verifiziert das Token, liest das PDF mit Gemini (Vertex AI) ein, speichert die erzeugten Quizfragen
+in Firestore und löscht das PDF wieder. Mit `GET /history` ruft die App frühere Ergebnisse ab.
+
+**Sicherheit:**
+- Jeder Endpunkt prüft das Firebase-ID-Token.
+- `/generate` akzeptiert nur Links der Form `gs://<PDF-Bucket>/pdfUploads/<eigene UID>/<datei>`,
+  damit weder fremde Dateien noch andere Buckets gelesen oder gelöscht werden können.
+- Der Bucket-Name kommt per Umgebungsvariable `PDF_BUCKET` aus Terraform.
+- Firestore- und Storage-Regeln sperren alles ausser dem eigenen Bereich des Nutzers.
+
+---
+
 ## 📋 Voraussetzungen
 
 Vor dem Deployment müssen folgende Tools installiert und konfiguriert sein:
